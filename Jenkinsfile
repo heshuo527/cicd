@@ -42,7 +42,7 @@ pipeline {
         }
     }
     environment {
-        DOCKER_IMAGE = "heshuo527/cicd-app:${env.BUILD_NUMBER}"
+        DOCKER_IMAGE = "heshuo77/my-cicd-app:${env.BUILD_NUMBER}"
         KUBE_NAMESPACE = "default"
     }
     options {
@@ -80,7 +80,12 @@ pipeline {
                                 sh """
                                 echo "登录Docker Hub..."
                                 echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
+                                
+                                echo "验证登录状态..."
+                                docker info | grep Username || echo "未显示用户名"
+                                
                                 echo "推送镜像到Docker Hub..."
+                                echo "镜像名称: ${DOCKER_IMAGE}"
                                 docker push ${DOCKER_IMAGE}
                                 echo "镜像推送完成"
                                 """
@@ -100,12 +105,16 @@ pipeline {
                                 echo "开始部署到Kubernetes..."
                                 kubectl version --client
                                 
+                                # 创建命名空间（如果不存在）
                                 kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f - || true
                                 
+                                # 更新部署文件中的镜像标签
                                 sed -i.bak 's|heshuo527/cicd-app:.*|${DOCKER_IMAGE}|g' k8s/deployment.yaml
                                 
+                                # 应用Kubernetes配置
                                 kubectl -n ${KUBE_NAMESPACE} apply -f k8s/
                                 
+                                # 等待部署完成
                                 kubectl -n ${KUBE_NAMESPACE} rollout status deployment/cicd-app --timeout=300s
                                 
                                 echo "部署完成！"

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cicd-app
-  namespace: cicd-demo
+  namespace: default
   labels:
     app: cicd-app
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: cicd-app
-        image: heshuo527/cicd-app:latest
+        image: heshuo77/my-cicd-app:latest
         ports:
         - containerPort: 80
         resources:
