@@ -39,8 +39,6 @@ pipeline {
                     path: /var/run/docker.sock
               activeDeadlineSeconds: 1800
             """
-            jenkinsUrl 'http://host.docker.internal:8080'
-            jenkinsTunnel 'host.docker.internal:50000'
         }
     }
     environment {
