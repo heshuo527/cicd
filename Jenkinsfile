@@ -64,12 +64,14 @@ pipeline {
             steps {
                 container('kubectl') {
                     script {
-                        sh """
-                        kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-                        sed -i 's|heshuo527/cicd-app:latest|${DOCKER_IMAGE}|g' k8s/deployment.yaml
-                        kubectl -n ${KUBE_NAMESPACE} apply -f k8s/
-                        kubectl -n ${KUBE_NAMESPACE} rollout status deployment/cicd-app
-                        """
+                        withCredentials([file(credentialsId: 'k8s-config', variable: 'KUBECONFIG')]) {
+                            sh """
+                            kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                            sed -i 's|heshuo527/cicd-app:latest|${DOCKER_IMAGE}|g' k8s/deployment.yaml
+                            kubectl -n ${KUBE_NAMESPACE} apply -f k8s/
+                            kubectl -n ${KUBE_NAMESPACE} rollout status deployment/cicd-app
+                            """
+                        }
                     }
                 }
             }
