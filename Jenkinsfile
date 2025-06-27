@@ -1,7 +1,6 @@
 pipeline {
     agent {
         kubernetes {
-            label "cicd-agent"
             yaml """
             apiVersion: v1
             kind: Pod
@@ -14,10 +13,24 @@ pipeline {
                 volumeMounts:
                   - mountPath: /var/run/docker.sock
                     name: docker-sock
+                resources:
+                  requests:
+                    memory: "256Mi"
+                    cpu: "100m"
+                  limits:
+                    memory: "512Mi"
+                    cpu: "300m"
               - name: kubectl
                 image: bitnami/kubectl:1.28
                 command: ['cat']
                 tty: true
+                resources:
+                  requests:
+                    memory: "128Mi"
+                    cpu: "50m"
+                  limits:
+                    memory: "256Mi"
+                    cpu: "100m"
               volumes:
                 - name: docker-sock
                   hostPath:
