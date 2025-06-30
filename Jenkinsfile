@@ -4,6 +4,10 @@ pipeline {
             yaml """
             apiVersion: v1
             kind: Pod
+            metadata:
+              labels:
+                jenkins: slave
+                app: cicd-demo
             spec:
               containers:
               - name: docker
@@ -37,6 +41,9 @@ pipeline {
                 - name: docker-sock
                   hostPath:
                     path: /var/run/docker.sock
+              nodeSelector:
+                kubernetes.io/os: linux
+              restartPolicy: Never
               activeDeadlineSeconds: 1800
             """
         }

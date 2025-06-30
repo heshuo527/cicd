@@ -1,0 +1,103 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              labels:
+                jenkins: slave
+            spec:
+              containers:
+              - name: docker
+                image: docker:24.0-dind
+                command: ['cat']
+                tty: true
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - mountPath: /var/run/docker.sock
+                    name: docker-sock
+              - name: kubectl
+                image: bitnami/kubectl:1.28
+                command: ['cat']
+                tty: true
+              volumes:
+              - name: docker-sock
+                hostPath:
+                  path: /var/run/docker.sock
+              restartPolicy: Never
+            """
+        }
+    }
+    environment {
+        DOCKER_IMAGE = "heshuo77/my-cicd-app:${env.BUILD_NUMBER}"
+        KUBE_NAMESPACE = "default"
+    }
+    stages {
+        stage('Test Connection') {
+            steps {
+                script {
+                    echo "测试Pod连接..."
+                    container('docker') {
+                        sh 'echo "Docker容器连接成功"; docker version'
+                    }
+                    container('kubectl') {
+                        sh 'echo "kubectl容器连接成功"; kubectl version --client'
+                    }
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                container('docker') {
+                    script {
+                        sh """
+                        echo "开始构建Docker镜像..."
+                        docker build -t ${DOCKER_IMAGE} .
+                        echo "Docker镜像构建完成: ${DOCKER_IMAGE}"
+                        """
+                    }
+                }
+            }
+        }
+        stage('Push to Docker Hub') {
+            steps {
+                container('docker') {
+                    script {
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                            sh """
+                            echo "登录Docker Hub..."
+                            echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
+                            docker push ${DOCKER_IMAGE}
+                            echo "镜像推送完成"
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        stage('Deploy to K8s') {
+            steps {
+                container('kubectl') {
+                    script {
+                        withCredentials([file(credentialsId: 'k8s-config-fixed', variable: 'KUBECONFIG')]) {
+                            sh """
+                            echo "开始部署到Kubernetes..."
+                            kubectl version --client
+                            
+                            # 更新部署文件中的镜像标签
+                            sed -i.bak 's|heshuo527/cicd-app:.*|${DOCKER_IMAGE}|g' k8s/deployment.yaml
+                            
+                            # 应用Kubernetes配置
+                            kubectl -n ${KUBE_NAMESPACE} apply -f k8s/
+                            
+                            echo "部署完成！"
+                            """
+                        }
+                    }
+                }
+            }
+        }
+    }
+} 
