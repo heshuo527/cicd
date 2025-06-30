@@ -100,7 +100,7 @@ pipeline {
                 container('kubectl') {
                     script {
                         timeout(time: 10, unit: 'MINUTES') {
-                            withCredentials([file(credentialsId: 'k8s-config', variable: 'KUBECONFIG')]) {
+                            withCredentials([file(credentialsId: 'k8s-config-fixed', variable: 'KUBECONFIG')]) {
                                 sh """
                                 echo "开始部署到Kubernetes..."
                                 kubectl version --client
